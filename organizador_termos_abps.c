@@ -46,13 +46,13 @@ void inicializa_lista_letras() {
     }
 }
 
-// Insere uma palavra na ABP
 void insere_palavra() {
     LISTA_LETRAS *aux = l;
     char palavra[100];
     printf("Digite a palavra que deseja armazenar: ");
     scanf("%s", palavra);
 
+    // Encontra a lista de letras apropriada para a primeira letra da palavra
     while (aux != NULL && tolower(aux->info) != tolower(palavra[0])) {
         aux = aux->prox;
     }
@@ -65,13 +65,13 @@ void insere_palavra() {
     NODO **raiz = &aux->nodo;
     while (*raiz != NULL) {
         int cmp = strcasecmp((*raiz)->info, palavra);
-        if (cmp == 0) {
+        if (cmp == 0) { // Se a palavra já existe, incrementa a quantidade
             (*raiz)->quantidade++;
             printf("Palavra já existente, quantidade incrementada.\n");
             return;
-        } else if (cmp > 0) {
+        } else if (cmp > 0) { // Palavra menor vai para a esquerda
             raiz = &(*raiz)->esq;
-        } else {
+        } else { // Palavra maior vai para a direita
             raiz = &(*raiz)->dir;
         }
     }
@@ -86,6 +86,8 @@ void insere_palavra() {
     (*raiz)->quantidade = 1;
     printf("Palavra inserida com sucesso.\n");
 }
+
+
 
 // Consulta uma palavra
 void consulta_palavra() {
@@ -246,11 +248,19 @@ void remove_ocorrencia() {
     }
 
     NODO *raiz = aux->nodo, *pai = NULL;
+    int removido = 0;
+
     while (raiz != NULL) {
         int comparacao = strcasecmp(raiz->info, palavra);
         if (comparacao == 0) {
             if (--raiz->quantidade <= 0) {
-                raiz = remove_nodo(raiz, palavra, &comparacao);
+                if (pai == NULL) {
+                    aux->nodo = remove_nodo(raiz, palavra, &removido);
+                } else if (pai->esq == raiz) {
+                    pai->esq = remove_nodo(raiz, palavra, &removido);
+                } else {
+                    pai->dir = remove_nodo(raiz, palavra, &removido);
+                }
             }
             printf("Ocorrência removida.\n");
             return;
@@ -258,59 +268,65 @@ void remove_ocorrencia() {
         pai = raiz;
         raiz = comparacao > 0 ? raiz->esq : raiz->dir;
     }
+
     printf("Palavra não encontrada.\n");
 }
 
-// Função de percurso pré-fixado
 void percurso_pre_fixado_rec(NODO *raiz) {
     if (raiz == NULL) return;
-    printf("%s (%d)\n", raiz->info, raiz->quantidade);
-    percurso_pre_fixado_rec(raiz->esq);
-    percurso_pre_fixado_rec(raiz->dir);
+    printf("%s (%d)\n", raiz->info, raiz->quantidade); // Exibe a palavra
+    percurso_pre_fixado_rec(raiz->esq); // Depois percorre a subárvore esquerda
+    percurso_pre_fixado_rec(raiz->dir); // Depois percorre a subárvore direita
 }
 
 void percurso_pre_fixado() {
     LISTA_LETRAS *aux = l;
     while (aux != NULL) {
-        printf("Palavras começando com '%c' (pré-fixado):\n", aux->info);
-        percurso_pre_fixado_rec(aux->nodo);
+        if (aux->nodo != NULL) {
+            percurso_pre_fixado_rec(aux->nodo); // Percorre a árvore binária de pesquisa
+        }
         aux = aux->prox;
     }
 }
 
-// Função de percurso pós-fixado
+
+
 void percurso_pos_fixado_rec(NODO *raiz) {
     if (raiz == NULL) return;
-    percurso_pos_fixado_rec(raiz->esq);
-    percurso_pos_fixado_rec(raiz->dir);
-    printf("%s (%d)\n", raiz->info, raiz->quantidade);
+    percurso_pos_fixado_rec(raiz->esq); // Primeiro percorre a subárvore esquerda
+    percurso_pos_fixado_rec(raiz->dir); // Depois percorre a subárvore direita
+    printf("%s (%d)\n", raiz->info, raiz->quantidade); // Exibe a palavra
 }
 
 void percurso_pos_fixado() {
     LISTA_LETRAS *aux = l;
     while (aux != NULL) {
-        printf("Palavras começando com '%c' (pós-fixado):\n", aux->info);
-        percurso_pos_fixado_rec(aux->nodo);
+        if (aux->nodo != NULL) {
+            percurso_pos_fixado_rec(aux->nodo); // Percorre a árvore binária de pesquisa
+        }
         aux = aux->prox;
     }
 }
 
-// Função de percurso central
+
+// Percurso Central (Inorder)
 void percurso_central_rec(NODO *raiz) {
     if (raiz == NULL) return;
-    percurso_central_rec(raiz->esq);
-    printf("%s (%d)\n", raiz->info, raiz->quantidade);
-    percurso_central_rec(raiz->dir);
+    percurso_central_rec(raiz->esq); // Primeiro a subárvore esquerda
+    printf("%s (%d)\n", raiz->info, raiz->quantidade); // Exibe a palavra
+    percurso_central_rec(raiz->dir); // Depois a subárvore direita
 }
 
 void percurso_central() {
     LISTA_LETRAS *aux = l;
     while (aux != NULL) {
-        printf("Palavras começando com '%c' (central):\n", aux->info);
-        percurso_central_rec(aux->nodo);
+        if (aux->nodo != NULL) { // Processa a árvore da letra que contém palavras
+            percurso_central_rec(aux->nodo);
+        }
         aux = aux->prox;
     }
 }
+
 
 // Encontra a letra com mais palavras
 void letra_com_mais_palavras() {
@@ -375,8 +391,6 @@ void exibe_palavras_por_letra() {
     }
 }
 
-
-// Função do menu
 void menu() {
     int opcao;
     inicializa_lista_letras();
@@ -398,8 +412,15 @@ void menu() {
         printf("13. Letra com mais palavras\n");
         printf("0. Sair\n");
         printf("Escolha uma opção: ");
-        scanf("%d", &opcao);
 
+        // Valida a entrada
+        if (scanf("%d", &opcao) != 1) {
+            printf("Entrada inválida! Por favor, digite um número.\n");
+            while (getchar() != '\n'); // Limpa o buffer
+            continue;
+        }
+
+        // Processa a opção
         switch (opcao) {
             case 1: insere_palavra(); break;
             case 2: consulta_palavra(); break;
@@ -419,7 +440,6 @@ void menu() {
         }
     } while (opcao != 0);
 }
-
 
 int main() {
 	setlocale(LC_ALL, "Portuguese");
